@@ -1,0 +1,11 @@
+LTISim
+Copyright 2025-2026 Tim Schwichtenberg
+
+Licensed under the Apache License, Version 2.0. See the LICENSE file.
+
+"LTISim" is a name used by the project's owner to identify this project.
+The Apache License does not grant permission to use it; see TRADEMARKS.md.
+
+This product depends on third-party software distributed under their own
+licenses, installed through npm and listed in backend/package.json and
+frontend/package.json.

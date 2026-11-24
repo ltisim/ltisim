@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend tests and first start
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: ltisim
+          POSTGRES_USER: ltisim
+          POSTGRES_PASSWORD: ci-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ltisim -d ltisim"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: "5432"
+      DB_NAME: ltisim
+      DB_USER: ltisim
+      DB_PASSWORD: ci-password
+      LTI_KEY: ci-only-not-a-secret
+      PUBLIC_URL: https://ltisim.example.edu
+      AI_PROVIDER: anthropic
+      PORT: "3001"
+      HOST: 127.0.0.1
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Schema applies to an empty database, and a second run changes nothing
+        run: |
+          npm run db:migrate
+          npm run db:migrate | tee second-run.log
+          grep -q "schema is up to date" second-run.log
+
+      - name: App starts and answers
+        run: |
+          node src/server.js > server.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:3001/health > /dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:3001/health
+          curl -fsS http://127.0.0.1:3001/keys > /dev/null
+          # No launch, no access
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3001/api/instance/overview)" = "401"
+          grep -q "Installed 3 sample assignment templates" server.log
+          grep -q "No LMS is registered yet" server.log
+
+      - name: Server log on failure
+        if: failure()
+        run: cat server.log || true
+
+  frontend:
+    name: Frontend build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - name: No address is baked into the build
+        run: |
+          if grep -rlE "localhost:[0-9]{4}" dist/assets; then
+            echo "The build contains a hardcoded local address" && exit 1
+          fi
+
+  docker:
+    name: Docker image builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t ltisim:ci .

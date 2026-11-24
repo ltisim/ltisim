@@ -1,0 +1,64 @@
+# Known limitations
+
+Open issues in this edition, most important first. Each says what the problem is and what to do about it meanwhile.
+
+## Not yet verified
+
+These are untested, not known to be broken.
+
+| Area | State | Meanwhile |
+|---|---|---|
+| A session from a real Canvas assignment | Conversation and grading are verified through the app's API with a simulated student on the Anthropic API. A session opened by a real student from Canvas, and the grade returning to the gradebook, are not | Run one yourself in a test course before real use |
+| Installing on a separate machine | Starting from an empty database is verified with Node directly and with Docker Compose, on the development server. A full install elsewhere by someone following the guide, including the reverse proxy, is not | Follow [Self-hosting](Self-Hosting.md) and report what needed adjusting |
+| OpenAI-compatible provider | Tested only against simulated responses. (The Anthropic API provider is verified live) | Use the Test button on each model after setup |
+| AWS Bedrock after this edition's changes | A live request reached AWS; a successful reply was not confirmed | Use the Test button |
+| Teacher and student launches | The role rules are unit-tested, and an administrator launch is verified live; a real teacher or student launch is not | Test with Canvas Student View and a teacher account |
+| Canvas account-menu entry | Registered but never launched | Use the Instance tab from a course |
+| Manual developer-key setup | Only the registration link has been used | Prefer the registration link |
+| LMSs other than Canvas | Not tested | Canvas only |
+
+## Grading quality depends on your model
+
+Grading was validated only on Anthropic models through AWS Bedrock. Grading asks the model for a structured result by instruction alone; a model that does not follow it produces a result that cannot be read, and the session waits in "evaluation pending" while the system retries.
+
+Meanwhile: collect blind grades and read the Grading agreement view before using automatic release.
+
+## Bedrock cannot tell which models think first
+
+On the Anthropic API, LTISim asks what each model supports and gives thinking models extra room for output. Bedrock offers no equivalent lookup here, so a newer Bedrock model may have replies or grading results cut short.
+
+Meanwhile: raise **Longest reply** on affected assignments.
+
+## Launch cookie checks may need relaxing
+
+Browsers increasingly block third-party cookies inside the LMS frame, which breaks strict launch validation in some browsers.
+
+Meanwhile: set `LTI_DEV_MODE=true`. This relaxes one check on the launch; the launch itself is still verified against the LMS's signature.
+
+## The session token travels in the address
+
+After launch, the tool's session token is passed in the page address and kept in the browser tab's session storage. It is valid for 24 hours by default and only for the launch it belongs to, but anyone who obtains the address within that time could act as that person in that course.
+
+Meanwhile: keep `LTI_SESSION_HOURS` low if this matters to you, and do not enable `LOG_VERBOSE` in production.
+
+## No per-student deletion or retention
+
+There is no way in the interface to delete or anonymise one student's data, and nothing is deleted automatically. Transcripts are kept until the database is cleaned by hand.
+
+## Budget limit ignores unpriced models
+
+The monthly budget counts only calls to models that have a price. The call limit counts everything.
+
+Meanwhile: use the call limit as the hard stop, or price every model.
+
+## One server process
+
+Rate limits are not applied, and some state (which models reject which settings, the generated setup token) is held in memory. The app is meant to run as a single process; it has not been run as several behind a load balancer.
+
+## Depends on the LTI library's own tables
+
+Grade return reads two tables that belong to the LTI library (`ltijs`). An upgrade of that library could change them. The library versions are not yet pinned.
+
+## Reference documentation is missing
+
+There is no architecture, API or database reference for this edition yet. The [documentation index](README.md) says where to look in the code meanwhile. `Cost-Analysis.md` and `AI-Grading-Validation.md` were written for the hosted product and carry a notice saying how to read them.

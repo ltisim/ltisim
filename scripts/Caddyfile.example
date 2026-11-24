@@ -1,0 +1,8 @@
+# Caddy reverse proxy for LTISim, with automatic HTTPS.
+# Copy to /etc/caddy/Caddyfile and replace the address with your own.
+# Caddy passes WebSocket upgrades (spoken input) and streams responses
+# without buffering by default, so nothing else is needed.
+
+ltisim.example.edu {
+    reverse_proxy 127.0.0.1:3001
+}
