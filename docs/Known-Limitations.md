@@ -8,7 +8,7 @@ These are untested, not known to be broken.
 
 | Area | State | Meanwhile |
 |---|---|---|
-| A session from a real Canvas assignment | Conversation and grading are verified through the app's API with a simulated student on the Anthropic API. A session opened by a real student from Canvas, and the grade returning to the gradebook, are not | Run one yourself in a test course before real use |
+| Sessions beyond a single test | One complete student session from a Canvas assignment is verified end to end on the Anthropic API, including the score being sent to Canvas. Several students at once, the other assignment types, and review-before-release have not been run on this edition | Run a rehearsal in a test course before real use |
 | Installing on a separate machine | Starting from an empty database is verified with Node directly and with Docker Compose, on the development server. A full install elsewhere by someone following the guide, including the reverse proxy, is not | Follow [Self-hosting](Self-Hosting.md) and report what needed adjusting |
 | OpenAI-compatible provider | Tested only against simulated responses. (The Anthropic API provider is verified live) | Use the Test button on each model after setup |
 | AWS Bedrock after this edition's changes | A live request reached AWS; a successful reply was not confirmed | Use the Test button |

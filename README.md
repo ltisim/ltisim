@@ -58,6 +58,7 @@ Verified against a live Canvas instance:
 - Registering the tool with Canvas by link (dynamic registration)
 - Launching from a course as an LMS administrator, in more than one course
 - The instructor dashboard and the Instance area
+- A complete student session opened from a Canvas assignment: conversation, AI grading, and the score sent back to Canvas (on the Anthropic API)
 
 Verified against the Anthropic API, driving the app's own API with a simulated student:
 
@@ -71,7 +72,6 @@ Covered by automated tests only (no live run yet):
 
 Not yet verified in this edition:
 
-- A session started by a real student from a Canvas assignment, and the grade returning to the Canvas gradebook
 - A full install on a separate machine by someone following the guide. (Starting from an empty database is verified, with Node directly and with Docker Compose)
 - Any LMS other than Canvas
 
