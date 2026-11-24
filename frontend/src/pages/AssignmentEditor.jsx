@@ -69,6 +69,27 @@ const TYPE_LABELS = {
   ai_examiner: 'AI Examiner',
 }
 
+// One or two sentences on what voice does here, from the server's own status
+// (backend services/voice.js; docs/Voice.md).
+function voiceSummary(voice) {
+  if (!voice) return ''
+  const input = {
+    aws: 'On this installation speech is transcribed by Amazon Transcribe, in any browser with a microphone.',
+    browser: "On this installation speech is transcribed by the student's own browser. That works in some browsers only, and the audio usually goes to the browser's maker.",
+    off: 'Spoken input is switched off on this installation.',
+  }[voice.input] || ''
+  const fallback = voice.browser_fallback
+    ? " If Amazon cannot be reached, the student's browser takes over, where it can."
+    : ''
+  const replies = voice.replies
+    ? " The persona's replies are read aloud in the voice you pick."
+    : " The persona's replies are not read aloud; students see text."
+  if (voice.input === 'off' && !voice.replies) {
+    return 'Voice is switched off on this installation, so this option has no effect. Your administrator can change that.'
+  }
+  return input + fallback + replies
+}
+
 function AssignmentEditor({ ltik, user }) {
   const { assignmentId } = useParams()
   const [searchParams] = useSearchParams()
@@ -127,6 +148,11 @@ function AssignmentEditor({ ltik, user }) {
   const [testTranscript, setTestTranscript] = useState('')
   const [testResult, setTestResult] = useState(null)
   const [testing, setTesting] = useState(false)
+  const [voice, setVoice] = useState(null) // what voice does on this installation
+
+  useEffect(() => {
+    adminAPI.getVoice().then((res) => setVoice(res.data)).catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (isEditing) {
@@ -740,15 +766,13 @@ function AssignmentEditor({ ltik, user }) {
                     <div>
                       <span className="text-sm font-medium text-gray-700">Voice conversation</span>
                       <p className="text-xs text-gray-400 mt-0.5">
-                        Students can speak their messages (turned into text they can edit before sending) and hear
-                        the persona's replies read aloud. Typing always remains available — voice is never
-                        required. Speech is handled by Amazon services when the server has AWS access.
-                        Without it, the student's browser does the transcription, which works in some browsers
-                        only and may send audio to the browser's maker, and replies are not read aloud.
+                        Students can speak their messages, which become text they can edit before sending.
+                        Typing always remains available — voice is never required.
+                        {' '}{voiceSummary(voice)}
                       </p>
                     </div>
                   </label>
-                  {form.voice_config?.enabled && (
+                  {form.voice_config?.enabled && voice?.replies !== false && (
                     <label className="flex items-center gap-2 text-sm mt-3 ml-7">
                       <span className="text-gray-600">Persona voice:</span>
                       <select

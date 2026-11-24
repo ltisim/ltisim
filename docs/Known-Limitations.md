@@ -16,7 +16,7 @@ These are untested, not known to be broken.
 | Canvas account-menu entry | Registered but never launched | Use the Instance tab from a course |
 | Manual developer-key setup | Only the registration link has been used | Prefer the registration link |
 | LMSs other than Canvas | Not tested | Canvas only |
-| Voice | The code is unchanged from the hosted product, where spoken input through Amazon Transcribe ran in production. On this edition nothing about voice has been exercised: not Transcribe, not the browser fallback, not spoken replies. Spoken replies (Amazon Polly) were never confirmed working on the hosted product either | Try an assignment with voice in a test course, in each browser your students use, before offering it |
+| Voice | How the engine is chosen (`VOICE_MODE`) is covered by automated tests, and the status shown at start is verified. Nobody has yet spoken into a running copy of this edition: not through Amazon Transcribe, not through the browser, and no reply has been heard through Amazon Polly. Spoken replies were never confirmed working on the hosted product either | Try an assignment with voice in a test course, in each browser your students use, before offering it |
 
 ## Grading quality depends on your model
 
@@ -26,9 +26,9 @@ Meanwhile: collect blind grades and read the Grading agreement view before using
 
 ## Voice depends on Amazon or the student's browser
 
-Voice is not routed through your AI provider. Spoken input uses Amazon Transcribe, or failing that the student's browser, which works in only some browsers and usually sends audio to the browser's maker. Spoken replies need Amazon Polly and have no alternative. There is no setting to choose the engine or to switch off the browser fallback, the language is fixed to US English on the Amazon path, and spoken replies are not counted in usage or stopped by the usage limits.
+Voice is not routed through your AI provider. Spoken input uses Amazon Transcribe or the student's browser, which works in only some browsers and usually sends audio to the browser's maker. Spoken replies need Amazon Polly and have no alternative. On the Amazon path the language is fixed to US English.
 
-Meanwhile: read [Voice](Voice.md) before enabling it. If audio must not leave your control, give the server AWS access for Transcribe or leave voice off.
+Meanwhile: read [Voice](Voice.md) and choose a `VOICE_MODE`. If audio must not go to a browser maker, use `aws` or `off`.
 
 ## Bedrock cannot tell which models think first
 

@@ -151,6 +151,10 @@ const startServer = async () => {
     const { attachVoiceWs } = require('./ws/voice-ws');
     attachVoiceWs(server);
 
+    // Work out what voice will do (docs/Voice.md) and say so in the log.
+    const voice = require('./services/voice');
+    voice.probe().then(() => console.log(voice.summaryLine())).catch(() => {});
+
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);

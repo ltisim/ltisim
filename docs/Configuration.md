@@ -86,19 +86,20 @@ See [Model providers](Model-Providers.md) for what each provider needs.
 | `AI_EXTRA_HEADERS` | | JSON object of extra request headers (`openai-compatible`) |
 | `AI_MAX_TOKENS_PARAM` | `max_tokens` | `max_tokens` or `max_completion_tokens` (`openai-compatible`) |
 | `AI_TIMEOUT_MS` | `120000` | Request timeout (`openai-compatible`); streaming requests allow ten minutes |
-| `AWS_BEDROCK_REGION` | `us-east-1` | AWS region (`bedrock`). Also the region for voice, which defaults to `us-east-2` when this is unset |
+| `AWS_BEDROCK_REGION` | `us-east-1` | AWS region (`bedrock`). Voice uses it too unless `AWS_VOICE_REGION` is set |
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | machine credentials | AWS credentials (`bedrock`, voice). Leave unset to use the machine's own AWS role or profile |
 | `AI_MODEL`, `AI_GRADING_MODEL` | | Default models, as an alternative to choosing them in the Instance area. A choice made in the Instance area takes precedence |
 
 ### Voice (optional)
 
-Voice is independent of `AI_PROVIDER`. Spoken input uses Amazon Transcribe when the server has AWS access and falls back to the student's browser otherwise; spoken replies use Amazon Polly and have no fallback. [Voice](Voice.md) covers the permissions needed, where audio goes, and cost. There is no variable that turns voice on: instructors enable it per assignment.
-
-These limits apply to spoken input through Transcribe:
+Voice is independent of `AI_PROVIDER`: it uses Amazon Transcribe and Amazon Polly, or the student's browser. [Voice](Voice.md) explains the modes, the permissions needed, where audio goes, and cost. Instructors turn voice on per assignment; these variables decide what it then uses.
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `VOICE_SESSION_MAX_SECONDS` | `1800` | Total spoken input allowed per session |
+| `VOICE_MODE` | `auto` | `auto` (Amazon if the server has AWS access, otherwise the student's browser), `aws` (Amazon only), `browser` (browser only, AWS never contacted) or `off` |
+| `VOICE_REPLIES` | `true` | `false` turns off spoken replies (Amazon Polly) |
+| `AWS_VOICE_REGION` | `AWS_BEDROCK_REGION`, then `AWS_REGION`, then `us-east-1` | AWS region for Transcribe and Polly |
+| `VOICE_SESSION_MAX_SECONDS` | `1800` | Total spoken input allowed per session (Transcribe only) |
 | `VOICE_STREAM_MAX_SECONDS` | `300` | Longest single stretch of spoken input |
 | `VOICE_IDLE_SECONDS` | `15` | Silence after which the stream closes |
 

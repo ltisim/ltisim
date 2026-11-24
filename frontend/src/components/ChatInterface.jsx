@@ -8,13 +8,23 @@ const SpeechRecognition = typeof window !== 'undefined'
   ? (window.SpeechRecognition || window.webkitSpeechRecognition)
   : null
 
-// Voice engine: AWS Transcribe streaming first (all browsers, per-assignment
-// vocabulary biasing); Web Speech API as automatic fallback when the streaming
-// path is down. Once Transcribe fails pre-transcript we stop retrying it for
-// the rest of the page load.
+// Voice engine. The server says what this installation uses (voiceRuntime,
+// from services/voice.js; see docs/Voice.md):
+//   input 'aws'      Amazon Transcribe streaming through the server
+//   input 'browser'  the browser's own speech recognition (Web Speech API)
+//   input 'off'      no spoken input
+// browser_fallback says whether the browser may take over when Transcribe
+// fails. It is false when the administrator has ruled the browser out, because
+// browser recognition usually sends audio to the browser's maker.
+// Once Transcribe fails before producing any text we stop retrying it for the
+// rest of the page load.
 let transcribeDead = false
 
-function ChatInterface({ interactions, onSendMessage, disabled, isTyping, personaName, voiceEnabled = false, sessionId = null }) {
+const UNAVAILABLE_HINT = 'Voice input is unavailable right now — you can type instead.'
+
+function ChatInterface({ interactions, onSendMessage, disabled, isTyping, personaName, voiceEnabled = false, voiceRuntime = null, sessionId = null }) {
+  const voiceInput = voiceRuntime?.input || 'aws'
+  const browserAllowed = voiceInput === 'browser' || (voiceRuntime ? voiceRuntime.browser_fallback === true : true)
   const [message, setMessage] = useState('')
   const [listening, setListening] = useState(false)
   const [voiceHint, setVoiceHint] = useState('')
@@ -27,12 +37,13 @@ function ChatInterface({ interactions, onSendMessage, disabled, isTyping, person
   const streamRef = useRef(null) // Transcribe engine handle
   const baseTextRef = useRef('')
 
-  // Transcribe streaming works in every browser with a mic, so the button
-  // shows whenever the assignment enables voice and capture exists.
+  // Transcribe streaming works in every browser with a mic; the browser path
+  // needs the browser to have speech recognition of its own.
   const voiceSupported =
     voiceEnabled &&
+    voiceInput !== 'off' &&
     typeof window !== 'undefined' &&
-    (!!navigator.mediaDevices?.getUserMedia || !!SpeechRecognition)
+    (voiceInput === 'aws' ? !!navigator.mediaDevices?.getUserMedia || (browserAllowed && !!SpeechRecognition) : true)
 
   const stopListening = () => {
     recognitionRef.current?.stop()
@@ -43,8 +54,14 @@ function ChatInterface({ interactions, onSendMessage, disabled, isTyping, person
   }
 
   const startWebSpeech = () => {
+    if (!browserAllowed) {
+      setVoiceHint(UNAVAILABLE_HINT)
+      return
+    }
     if (!SpeechRecognition) {
-      setVoiceHint('Voice input is unavailable right now — you can type instead.')
+      setVoiceHint(voiceInput === 'browser'
+        ? 'Voice input is not available in this browser — you can type instead.'
+        : UNAVAILABLE_HINT)
       return
     }
     const rec = new SpeechRecognition()
@@ -72,11 +89,16 @@ function ChatInterface({ interactions, onSendMessage, disabled, isTyping, person
     setVoiceHint('')
     baseTextRef.current = message ? message.trimEnd() + ' ' : ''
 
-    if (!transcribeDead && sessionId) {
+    if (voiceInput === 'aws' && !transcribeDead && sessionId) {
+      // The server reports "ready" before Amazon has answered, so a failure
+      // can arrive after listening has started. Until some text has come back
+      // it is treated the same as a failure to start.
+      let heardSomething = false
       try {
         const handle = await startTranscribeStream({
           sessionId,
           onTranscript: ({ stable, unstable }) => {
+            heardSomething = true
             const joined = stable + (stable && unstable ? ' ' : '') + unstable
             setMessage(baseTextRef.current + joined)
             setSpokeInput(true)
@@ -88,6 +110,11 @@ function ChatInterface({ interactions, onSendMessage, disabled, isTyping, person
           onError: () => {
             streamRef.current = null
             setListening(false)
+            if (!heardSomething) {
+              // Without a fallback, leave Transcribe retryable: the fault may pass.
+              if (browserAllowed) transcribeDead = true
+              startWebSpeech()
+            }
           },
         })
         streamRef.current = handle
@@ -98,7 +125,7 @@ function ChatInterface({ interactions, onSendMessage, disabled, isTyping, person
           setVoiceHint('Voice input needs microphone access — allow it in your browser, or type instead.')
           return
         }
-        transcribeDead = true // fall through to Web Speech below
+        if (browserAllowed) transcribeDead = true // fall through to Web Speech below
       }
     }
     startWebSpeech()

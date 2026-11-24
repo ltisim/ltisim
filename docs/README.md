@@ -38,7 +38,7 @@ Reference documentation for this edition's architecture, HTTP API and database d
 | The HTTP API | `backend/src/routes/`: `simulation.js` (students), `admin.js` and `authoring.js` (instructors), `instance.js` (administrators) |
 | How a launch is handled | `backend/src/config/lti.js` and `backend/src/utils/launch.js` |
 | How models are called | `backend/src/services/ai/` |
-| How voice works | `backend/src/ws/voice-ws.js`, `backend/src/services/transcribe-relay.js` and `tts.js`, `frontend/src/components/ChatInterface.jsx` |
+| How voice works | `backend/src/services/voice.js` (what is used and why), `backend/src/ws/voice-ws.js`, `backend/src/services/transcribe-relay.js` and `tts.js`, `frontend/src/components/ChatInterface.jsx` |
 
 ## What changed where
 

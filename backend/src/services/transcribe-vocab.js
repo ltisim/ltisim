@@ -20,6 +20,8 @@ const pool = require('../config/database');
 // simply run without biasing. syncVocabulary() is fire-and-forget from the
 // assignment save paths and never throws into them.
 
+const voice = require('./voice');
+
 let client = null;
 let unavailable = false; // AccessDenied → skip syncs for the process lifetime
 
@@ -29,15 +31,7 @@ const readyCache = new Map(); // assignment_id → { at, state, name }
 
 function getClient() {
   if (!client) {
-    client = new TranscribeClient({
-      region: process.env.AWS_BEDROCK_REGION || 'us-east-2',
-      ...(process.env.AWS_ACCESS_KEY_ID && {
-        credentials: {
-          accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-        },
-      }),
-    });
+    client = new TranscribeClient(voice.awsClientOptions());
   }
   return client;
 }
@@ -99,7 +93,7 @@ async function saveState(assignmentId, state) {
  * Fire-and-forget from save paths: never throws.
  */
 async function syncVocabulary(assignmentId) {
-  if (unavailable) return;
+  if (unavailable || voice.status().input !== 'aws') return;
   try {
     const { rows } = await pool.query(
       `SELECT id, persona_name, persona_description, scenario_context, stages,
@@ -147,7 +141,7 @@ async function syncVocabulary(assignmentId) {
   } catch (err) {
     if (err.name === 'AccessDeniedException') {
       unavailable = true;
-      console.warn('[transcribe-vocab] access denied — vocabulary sync disabled until the IAM policy is added (see Runbooks) and the service restarts');
+      console.warn('[transcribe-vocab] access denied — vocabulary sync disabled until the IAM policy is added (see docs/Voice.md) and the service restarts');
       return;
     }
     console.error(`[transcribe-vocab] sync failed for assignment ${assignmentId}:`, err.message);
@@ -168,7 +162,7 @@ async function syncVocabulary(assignmentId) {
  * vocab = the assignment's transcribe_vocab JSONB value.
  */
 async function getReadyVocabularyName(assignmentId, vocab) {
-  if (unavailable || !vocab?.vocabulary_name) return null;
+  if (unavailable || voice.status().input !== 'aws' || !vocab?.vocabulary_name) return null;
   if (vocab.state === 'READY') return vocab.vocabulary_name;
   if (vocab.state !== 'PENDING') return null;
 
@@ -202,7 +196,7 @@ async function getReadyVocabularyName(assignmentId, vocab) {
 async function deleteVocabulary(assignmentId, vocab) {
   readyCache.delete(assignmentId);
   const name = vocab?.vocabulary_name || `ltisim-a${assignmentId}`;
-  if (unavailable) return;
+  if (unavailable || voice.status().input !== 'aws') return;
   try {
     await getClient().send(new DeleteVocabularyCommand({ VocabularyName: name }));
     console.log(`[transcribe-vocab] deleted ${name}`);

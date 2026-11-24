@@ -6,16 +6,35 @@ Voice is optional and off by default. An instructor turns it on per assignment w
 
 ## Voice does not use your AI provider
 
-Voice is separate from `AI_PROVIDER`. Whatever model you chose for conversation and grading, speech is handled by Amazon services when the server can reach them, and by the student's browser when it cannot.
+Voice is separate from `AI_PROVIDER`. Whatever model you chose for conversation and grading, speech is handled by Amazon services or by the student's browser.
 
-| | With AWS access | Without AWS access |
+| | Amazon | Student's browser |
 |---|---|---|
-| **Spoken input** (student speaks) | Amazon Transcribe, in every browser that has a microphone | The browser's own speech recognition, where the browser has one. Otherwise the student is told to type |
-| **Spoken replies** (persona is read aloud) | Amazon Polly, in the voice the instructor picked | None. Replies appear as text only |
+| **Spoken input** (student speaks) | Amazon Transcribe, in every browser that has a microphone | The browser's own speech recognition. Only some browsers have one; in the others the student is told to type |
+| **Spoken replies** (persona is read aloud) | Amazon Polly, in the voice the instructor picked | Not available. Replies appear as text only |
 
-There is no setting that chooses between these. The server tries AWS, and the student's browser falls back when that fails.
+## Choosing what voice uses
 
-"AWS access" means credentials the server can find and that are permitted to use the service. Credentials come from `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`, or, when those are unset, from the machine's own role or profile. So a server that has an AWS profile for some other purpose will use it for voice.
+Set `VOICE_MODE` on the server and restart.
+
+| `VOICE_MODE` | Spoken input | Spoken replies | Choose it when |
+|---|---|---|---|
+| `auto` (default) | Amazon Transcribe if the server has AWS access; otherwise, or if Transcribe fails, the student's browser | Amazon Polly if the server has AWS access | You want voice to work with whatever is available |
+| `aws` | Amazon Transcribe only. If it is unavailable, students type | Amazon Polly | Audio must never go to a browser maker |
+| `browser` | The student's browser only. AWS is never contacted, even if credentials exist | None | You have no AWS account, or do not want voice to use it |
+| `off` | None | None | You do not want voice at all. The option stays in the editor but tells instructors it has no effect |
+
+`VOICE_REPLIES=false` turns spoken replies off in any mode, leaving spoken input as it is.
+
+"AWS access" means credentials the server can find: `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`, or, when those are unset, the machine's own role or profile. So in `auto`, a server that has an AWS profile for some other purpose will use it for voice. Use `browser` or `off` to rule that out.
+
+### Seeing what is in effect
+
+- **Server log at start:** one line, for example `[voice] mode=auto; spoken input: Amazon Transcribe (browser if it fails); spoken replies: Amazon Polly`.
+- **Instance area, Setup tab:** the **Voice** row says the same, with the AWS region and the reason if something is unavailable.
+- **Assignment editor:** the text under **Voice conversation** tells the instructor what students will get on this installation.
+
+At start the server only checks that credentials exist. Whether they are *permitted* to use Transcribe and Polly is found out on first use; a refusal is then remembered until restart, and the three places above update.
 
 ## Where the audio goes
 
@@ -27,7 +46,7 @@ Say this to whoever reviews privacy for your institution before turning voice on
 | Browser speech recognition | Whoever makes the student's browser. In most browsers the audio goes to that company's servers, directly from the student's device | No |
 | Amazon Polly | The text of the persona's reply goes to your AWS account | No |
 
-The browser path matters most. If you chose a self-hosted model so that nothing leaves your network, the browser fallback does not honour that: recognition is done by the browser's maker, and your server is not involved. To avoid it, either give the server AWS access for Transcribe or leave voice off.
+The browser path matters most. If you chose a self-hosted model so that nothing leaves your network, browser recognition does not honour that: it is done by the browser's maker, and your server is not involved. To rule it out, set `VOICE_MODE=aws` or `VOICE_MODE=off`.
 
 In both input paths the transcript appears in the message box, and the student can edit it before sending.
 
@@ -43,20 +62,21 @@ In both input paths the transcript appears in the message box, and the student c
    | `polly:SynthesizeSpeech` | Spoken replies |
 
 3. Pass WebSocket upgrades for `/api/voice/ws` through your reverse proxy (see [Self-hosting](Self-Hosting.md)).
-4. Restart the app. A denied permission turns that service off until the next restart.
+4. Restart the app and read the `[voice]` line in the log.
 
-The region is taken from `AWS_BEDROCK_REGION`, even when Bedrock is not your AI provider. If it is unset, voice uses `us-east-2`. (Bedrock itself defaults to `us-east-1`; set the variable to avoid the mismatch.)
+The region is `AWS_VOICE_REGION` if set, otherwise `AWS_BEDROCK_REGION`, otherwise `AWS_REGION`, otherwise `us-east-1`. Set `AWS_VOICE_REGION` only if voice should use a different region from Bedrock.
 
-### What each permission failure does
+### What each failure does
 
-Each part fails on its own, and none of them stops a session.
+Each part fails on its own, and none of them stops a session. A refusal is tried once and remembered until restart.
 
-| Missing | Result |
-|---|---|
-| Transcribe streaming | Spoken input falls back to the browser |
-| Vocabulary actions | Transcribe still works, without the assignment's vocabulary |
-| Polly | No spoken replies; text only |
-| WebSocket not passed by the proxy | Same as Transcribe missing: falls back to the browser |
+| Problem | In `auto` | In `aws` |
+|---|---|---|
+| No credentials, or they are rejected | Spoken input moves to the browser; no spoken replies | No spoken input; no spoken replies |
+| Transcribe permission refused | Spoken input moves to the browser | No spoken input; students type |
+| WebSocket not passed by the proxy | Each student's browser takes over after a short pause | Students are told voice is unavailable |
+| Vocabulary permissions refused | Transcribe works, without the assignment's vocabulary | Same |
+| Polly permission refused | No spoken replies; text only | Same |
 
 ### Vocabulary
 
@@ -76,11 +96,16 @@ Spoken input through Transcribe is also stopped by the installation's monthly us
 
 ## Usage and cost
 
-Each stretch of spoken input through Transcribe is recorded as one call of type `voice`, against the model ID `aws.transcribe-streaming`, with one "token" per second of audio. It shows in the Instance area's **Usage & limits** tab with the other calls.
+Both Amazon services are recorded in the Instance area's **Usage & limits** tab, and both are stopped by the installation's monthly usage limits.
 
-No price is shipped, so by default these calls count toward the call limit but not the dollar budget. To put a price on them, add a model in the **Models** tab with the ID `aws.transcribe-streaming`, enter your per-second price as the input price (a price of $0.024 per minute is 400 per million), enter 0 as the output price, and then switch the model off so it is not offered to instructors. This follows from how prices are applied; it has not been tried on a running installation.
+| | Call type | Model ID | Counted as |
+|---|---|---|---|
+| Spoken input (Transcribe) | `voice` | `aws.transcribe-streaming` | One call per stretch of speech; one "token" per second of audio |
+| Spoken replies (Polly) | `voice_reply` | `aws.polly-neural` | One call per reply; one "token" per character read aloud |
 
-Spoken replies through Polly are **not recorded** and are not stopped by the usage limits. Watch that cost in your AWS account.
+When a limit is reached, spoken input and spoken replies stop and the session carries on in text.
+
+No price is shipped, so by default these calls count toward the call limit but not the dollar budget. To put a price on one, add a model in the **Models** tab with the model ID from the table, enter your price per million seconds or characters as the input price (for example, $0.024 per minute of audio is 400), enter 0 as the output price, and then switch the model off so it is not offered to instructors. This follows from how prices are applied; it has not been tried on a running installation.
 
 The browser path costs nothing and records nothing.
 
@@ -88,19 +113,21 @@ The browser path costs nothing and records nothing.
 
 - **Language.** Transcribe is set to US English. The browser path uses the browser's language.
 - **Voices.** Eight Polly voices, all US English, chosen per assignment.
-- **Engine.** Transcribe first, browser second. There is no setting to force one or to disable the fallback.
 
 ## Not verified in this edition
 
-See [Known limitations](Known-Limitations.md). In short: the voice code came from the hosted product unchanged. Spoken input through Transcribe ran in production there. The browser fallback and spoken replies have not been exercised on this edition, and spoken replies were never confirmed working on the hosted product either.
+See [Known limitations](Known-Limitations.md). In short: the choice of engine, and what is reported to administrators and instructors, are covered by automated tests. Nobody has yet spoken into a running copy of this edition, on any path. The Transcribe path was in use on the hosted product; spoken replies were never confirmed working there either.
 
 ## Troubleshooting
 
+Start with the `[voice]` line in the server log, or the Voice row in the Instance area's Setup tab.
+
 | Symptom | Likely cause |
 |---|---|
-| No microphone button | Voice is not enabled on the assignment, or it is an LLM interaction assignment |
+| No microphone button | Voice is not enabled on the assignment, it is an LLM interaction assignment, or spoken input is off on this installation |
 | "Voice input needs microphone access" | The student declined the microphone prompt. Nothing falls back from this; they allow it or type |
-| "Voice input is unavailable right now" | Transcribe could not be reached and the browser has no speech recognition of its own |
-| A pause of a few seconds before listening starts, once per page | Transcribe did not answer and the browser took over. Expected without AWS access |
-| No spoken replies | Polly is not permitted or not reachable. The server log has a `[tts]` line saying which |
-| `[transcribe]` or `[tts]` errors in the log on an installation without AWS | Expected. The server tries AWS once per page load before the browser gives up on it |
+| "Voice input is not available in this browser" | `VOICE_MODE=browser`, and this browser has no speech recognition |
+| "Voice input is unavailable right now" | Transcribe could not be reached, and either the browser is ruled out (`VOICE_MODE=aws`) or it has no speech recognition |
+| Listening starts, then stops, then starts again | In `auto`, Transcribe failed on first use and the browser took over. It happens once; after that the server sends students straight to the browser |
+| No spoken replies, and no "Voice on" button | Replies are off: no AWS access, Polly refused, or `VOICE_REPLIES=false`. The server log has a `[voice]` or `[tts]` line saying which |
+| Spoken input and replies stop partway through the month | A usage limit was reached |

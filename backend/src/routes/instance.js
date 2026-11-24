@@ -93,6 +93,7 @@ router.get('/overview', async (req, res) => {
         models_listed: ai.models.length,
         email_configured: isEmailConfigured(),
       },
+      voice: require('../services/voice').describe(),
     });
   } catch (err) {
     console.error('Instance overview error:', err);

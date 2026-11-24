@@ -22,6 +22,7 @@ The first tab. It opens with a checklist of what is configured and what is not, 
 | Models listed | At least one model is available to instructors |
 | Default model chosen | A default conversation model is set |
 | AI provider responds | You press **Test connection** and the default model answers |
+| Voice (optional) | Informational. Says what spoken input and spoken replies use on this installation (Amazon services, the student's browser, or off) and why. Set with `VOICE_MODE` on the server; see [Voice](Voice.md) |
 | Outgoing email (optional) | The server has mail settings. Only needed for usage alerts |
 
 Below the checklist:

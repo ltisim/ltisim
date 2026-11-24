@@ -547,6 +547,11 @@ router.get('/ai-models', verifyLTI, verifyInstructor, async (req, res) => {
   }
 });
 
+// What the Voice conversation option does on this installation
+router.get('/voice', verifyLTI, verifyInstructor, (req, res) => {
+  res.json(require('../services/voice').status());
+});
+
 // Create a new assignment
 router.post('/assignments', verifyLTI, verifyInstructor, async (req, res) => {
   try {

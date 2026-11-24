@@ -3,21 +3,22 @@ const {
   StartStreamTranscriptionCommand,
 } = require('@aws-sdk/client-transcribe-streaming');
 
-// Voice input via Amazon Transcribe streaming (see docs/Runbooks.md → "Voice input").
+const voice = require('./voice');
+
+// Voice input via Amazon Transcribe streaming (see docs/Voice.md).
 //
 // Relay core: the WS layer (ws/voice-ws.js) feeds raw Int16 16kHz mono PCM
 // frames in via pushAudio(); this module streams them to Transcribe and calls
 // back with accumulated transcript text. It has NO ws/express dependencies so
 // it can be reused outside the WebSocket server.
 //
-// Fail-safe: mirrors tts.js — the IAM user may lack transcribe:StartStream-
-// Transcription; the first AccessDenied disables the relay for the process
-// lifetime (clients fall back to Web Speech). A restart re-probes.
+// Fail-safe: a denied permission or unusable credentials are recorded in
+// services/voice.js and disable the relay until restart. Whether the browser
+// may take over instead is decided there (VOICE_MODE).
 //
 // Accounting: audio seconds = bytes / 32000 (16,000 samples/s × 2 bytes).
 
 let client = null;
-let unavailable = false;
 
 const BYTES_PER_SECOND = 32000;
 const MAX_QUEUED_FRAMES = 100; // ~10s of 100ms frames; beyond this the consumer is stuck
@@ -25,21 +26,13 @@ const DRAIN_TIMEOUT_MS = 3000; // max wait for trailing finals after a graceful 
 
 function getClient() {
   if (!client) {
-    client = new TranscribeStreamingClient({
-      region: process.env.AWS_BEDROCK_REGION || 'us-east-2',
-      ...(process.env.AWS_ACCESS_KEY_ID && {
-        credentials: {
-          accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-        },
-      }),
-    });
+    client = new TranscribeStreamingClient(voice.awsClientOptions());
   }
   return client;
 }
 
 function isTranscribeAvailable() {
-  return !unavailable;
+  return voice.status().input === 'aws';
 }
 
 // Rebuild display text from result Items (Transcribe's per-word tokens),
@@ -206,9 +199,7 @@ function createRelay(opts) {
       // Transcript stream drained (normal close after the audio generator ended).
       finish('end', endReason || 'client_stop');
     } catch (err) {
-      if (err.name === 'AccessDeniedException') {
-        unavailable = true;
-        console.warn('[transcribe] access denied — voice streaming disabled until the IAM policy is added (see Runbooks) and the service restarts');
+      if (voice.noteAwsError('transcribe', err)) {
         finish('error', 'unavailable');
       } else if (!done) {
         console.error('[transcribe] stream failed:', err.name, err.message);
@@ -217,7 +208,7 @@ function createRelay(opts) {
     }
   }
 
-  if (unavailable) {
+  if (!isTranscribeAvailable()) {
     // Surface asynchronously so callers can wire handlers before it fires.
     setImmediate(() => finish('error', 'unavailable'));
   } else {

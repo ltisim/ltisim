@@ -10,7 +10,7 @@ Scope of this release: **one installation, one institution, Canvas.**
 
 - Role-play sessions with an AI persona, opened directly from a Canvas assignment.
 - Replies that stream as they are written.
-- Spoken input and spoken replies, where the instructor turns voice on. Both depend on Amazon services or the student's browser, not on your AI provider; see [Voice](Voice.md) for what works without AWS and where audio goes.
+- Spoken input and spoken replies, where the instructor turns voice on. Both depend on Amazon services or the student's browser, not on your AI provider. The administrator chooses which with one setting; see [Voice](Voice.md) for what works without AWS and where audio goes.
 - Practice sessions that do not count toward the grade, where the instructor allows them.
 - Feedback against the rubric once it is released.
 

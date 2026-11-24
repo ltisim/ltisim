@@ -11,7 +11,7 @@ const { logAiUsage } = require('../utils/ai-usage');
 //
 // Browser AudioWorklet streams Int16 16kHz PCM frames; we relay them to
 // Amazon Transcribe streaming (services/transcribe-relay.js) and send partial
-// transcripts back. See docs/Runbooks.md → "Voice input" for the protocol.
+// transcripts back. See docs/Voice.md.
 //
 // Handshake (all checks before any audio reaches AWS):
 //   1. ltik JWT verify + platform lookup — the same auth as middleware/auth.js,
@@ -20,7 +20,7 @@ const { logAiUsage } = require('../utils/ai-usage');
 //   3. Instance AI quota (checkAiQuota — voice rides the same budgets as
 //      chat via the synthetic 'aws.transcribe-streaming' ai_models row).
 //   4. Per-session voice cap: SUM(prompt_tokens) of call_type='voice' rows,
-//      where 1 prompt token = 1 second of audio (see migrate-v22).
+//      where 1 prompt token = 1 second of audio.
 //
 // Close codes: 1000 ok · 4001 auth · 4003 forbidden · 4029 quota/cap ·
 // 4500 transcribe failure/overflow · 1011 unexpected.
@@ -55,14 +55,15 @@ function attachVoiceWs(server) {
       ws.close(code);
     };
 
+    // Checked first: in browser or off mode no audio may reach the server.
+    if (!isTranscribeAvailable()) return reject(4500, 'transcribe not in use');
+
     let context;
     try {
       context = await authorize(req);
     } catch (err) {
       return reject(err.wsCode || 1011, err.message);
     }
-
-    if (!isTranscribeAvailable()) return reject(4500, 'transcribe unavailable');
 
     const { platformId, session, remainingSeconds, vocabularyName } = context;
 

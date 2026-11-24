@@ -190,5 +190,5 @@ Run from `backend/`:
 | "Session expired; relaunch from your LMS" | The launch is older than `LTI_SESSION_HOURS` (default 24). Open the tool again from Canvas |
 | Assignments will not run | No default model is set. Open Instance, then Models |
 | Chat replies arrive all at once | The reverse proxy is buffering responses |
-| Spoken input is slow to start or only works in some browsers | The server cannot reach Amazon Transcribe, so the student's browser is doing the recognition. Either the proxy is not passing WebSocket upgrades for `/api/voice/ws`, or the server has no AWS access. See [Voice](Voice.md) |
-| No spoken replies | Amazon Polly is not permitted or not reachable. See [Voice](Voice.md) |
+| Spoken input only works in some browsers, or not at all | Read the `[voice]` line in the server log: it says what voice is using. If it says Amazon Transcribe, the proxy is probably not passing WebSocket upgrades for `/api/voice/ws`. See [Voice](Voice.md) |
+| No spoken replies | Replies need Amazon Polly. See [Voice](Voice.md) |

@@ -161,6 +161,7 @@ function SimulationPage({ ltik, user: initialUser }) {
   // the first 503 disables further attempts for this page load.
   const playReply = async (interaction) => {
     if (!assignment?.voice_config?.enabled || voiceMuted || ttsUnavailableRef.current) return
+    if (assignment.voice_runtime && !assignment.voice_runtime.replies) return
     try {
       const res = await simulationAPI.tts(session.id, interaction.id)
       const url = URL.createObjectURL(new Blob([res.data], { type: 'audio/mpeg' }))
@@ -439,7 +440,7 @@ function SimulationPage({ ltik, user: initialUser }) {
     <div className="h-screen flex flex-col">
       <header className="bg-surface-darker text-white py-4 px-6 shadow-md flex-shrink-0">
         <div className="flex items-center gap-4">
-          {assignment?.voice_config?.enabled === true && (
+          {assignment?.voice_config?.enabled === true && assignment?.voice_runtime?.replies !== false && (
             <button
               onClick={() => { setVoiceMuted((m) => !m); if (!voiceMuted) audioRef.current?.pause() }}
               className="text-white/80 hover:text-white text-xs font-medium px-2 py-1 rounded border border-white/30 order-last ml-auto"
@@ -939,6 +940,7 @@ function SimulationPage({ ltik, user: initialUser }) {
                   isTyping={isTyping}
                   personaName={assignment?.persona_name}
                   voiceEnabled={assignment?.voice_config?.enabled === true}
+                  voiceRuntime={assignment?.voice_runtime}
                   sessionId={session?.id}
                 />
               </div>
@@ -1003,6 +1005,7 @@ function SimulationPage({ ltik, user: initialUser }) {
                   isTyping={isTyping}
                   personaName={assignment?.persona_name}
                   voiceEnabled={assignment?.voice_config?.enabled === true}
+                  voiceRuntime={assignment?.voice_runtime}
                   sessionId={session?.id}
                 />
               </div>
@@ -1050,6 +1053,7 @@ function SimulationPage({ ltik, user: initialUser }) {
                 isTyping={isTyping}
                 personaName={assignment?.persona_name}
                 voiceEnabled={assignment?.voice_config?.enabled === true}
+                  voiceRuntime={assignment?.voice_runtime}
                 sessionId={session?.id}
               />
             </div>

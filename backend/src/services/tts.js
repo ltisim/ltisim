@@ -1,28 +1,28 @@
 const { PollyClient, SynthesizeSpeechCommand } = require('@aws-sdk/client-polly');
+const voice = require('./voice');
 
-// Text-to-speech via Amazon Polly (voice mode, Plan 07 phase B).
+// Spoken replies via Amazon Polly (see docs/Voice.md).
 //
-// Fail-safe: the IAM user may lack polly:SynthesizeSpeech (see Runbooks →
-// "Voice output"). The first AccessDenied disables TTS for the process
-// lifetime so we don't hammer a permanently-denied API; a restart re-probes.
+// Whether replies are on at all is decided in services/voice.js. A denied
+// permission or unusable credentials are recorded there and stop further
+// attempts until restart.
+
+const MODEL_ID = 'aws.polly-neural';
 
 let client = null;
-let unavailable = false;
 
 function getClient() {
-  if (!client) {
-    client = new PollyClient({ region: process.env.AWS_BEDROCK_REGION || 'us-east-2' });
-  }
+  if (!client) client = new PollyClient(voice.awsClientOptions());
   return client;
 }
 
 function isTtsAvailable() {
-  return !unavailable;
+  return voice.status().replies;
 }
 
 /** Synthesize text → mp3 Buffer, or null when unavailable/failed. */
 async function synthesize(text, voiceId = 'Joanna') {
-  if (unavailable || !text?.trim()) return null;
+  if (!isTtsAvailable() || !text?.trim()) return null;
   try {
     const response = await getClient().send(new SynthesizeSpeechCommand({
       Text: text,
@@ -34,14 +34,9 @@ async function synthesize(text, voiceId = 'Joanna') {
     for await (const chunk of response.AudioStream) chunks.push(chunk);
     return Buffer.concat(chunks);
   } catch (err) {
-    if (err.name === 'AccessDeniedException') {
-      unavailable = true;
-      console.warn('[tts] Polly access denied — voice output disabled until the IAM policy is added (see Runbooks) and the service restarts');
-    } else {
-      console.error('[tts] synthesis failed:', err.message);
-    }
+    if (!voice.noteAwsError('polly', err)) console.error('[tts] synthesis failed:', err.name, err.message);
     return null;
   }
 }
 
-module.exports = { synthesize, isTtsAvailable };
+module.exports = { synthesize, isTtsAvailable, MODEL_ID };

@@ -128,6 +128,9 @@ export const adminAPI = {
   // AI provider and selectable models for this instance
   getAiModels: () => api.get('/api/admin/ai-models'),
 
+  // What the Voice conversation option does on this installation
+  getVoice: () => api.get('/api/admin/voice'),
+
   // Get all enrollments for the course
   getEnrollments: () => api.get('/api/admin/course/enrollments'),
 

@@ -189,7 +189,7 @@ function Overview({ goTo }) {
 
   if (error) return <LoadError message={error} />
   if (!data) return <Loading />
-  const { lms, tool, ai, counts, checks, version } = data
+  const { lms, tool, ai, counts, checks, version, voice } = data
   const link = (section, text) => (
     <button onClick={() => goTo(section)} className="text-primary-700 underline">{text}</button>
   )
@@ -241,6 +241,27 @@ function Overview({ goTo }) {
               </button>
             )}
           />
+          {voice && (
+            <CheckRow
+              state={voice.input === 'aws' || voice.mode === 'browser' || voice.mode === 'off' ? 'ok' : 'todo'}
+              title="Voice (optional)"
+              detail={
+                <>
+                  Voice does not use your AI provider. Spoken input:{' '}
+                  <strong>{{ aws: 'Amazon Transcribe', browser: "the student's browser", off: 'off' }[voice.input]}</strong>
+                  {voice.browser_fallback && " (the student's browser if Amazon fails)"}. Spoken replies:{' '}
+                  <strong>{voice.replies ? 'Amazon Polly' : 'off'}</strong>.
+                  {voice.region && <> AWS region {voice.region}.</>}
+                  {voice.notes?.length > 0 && <> {voice.notes.join(' ')}</>}
+                  {voice.input === 'browser' && (
+                    <> Browser recognition works in some browsers only and usually sends audio to the browser's maker.</>
+                  )}
+                  {' '}Set with <code>VOICE_MODE</code> on the server (<code>auto</code>, <code>aws</code>,{' '}
+                  <code>browser</code> or <code>off</code>); instructors turn voice on per assignment.
+                </>
+              }
+            />
+          )}
           <CheckRow
             state={checks.email_configured ? 'ok' : 'todo'}
             title="Outgoing email (optional)"

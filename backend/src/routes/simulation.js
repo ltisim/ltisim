@@ -9,6 +9,7 @@ const { getLtiIdToken } = require('../utils/lti-grade');
 const { submitGradeForSession } = require('../utils/grade-passback');
 const { logAiUsage } = require('../utils/ai-usage');
 const { checkAiQuota } = require('../utils/ai-quota');
+const { status: voiceStatus } = require('../services/voice');
 
 // Get or create user from LTI token
 router.get('/user', verifyLTI, async (req, res) => {
@@ -151,6 +152,8 @@ router.get('/assignments/:assignmentId', verifyLTI, async (req, res) => {
           : null,
         examiner_style: assignment.examiner_config?.style || null,
         voice_config: assignment.voice_config || null,
+        // What voice does on this installation right now (services/voice.js)
+        voice_runtime: assignment.voice_config?.enabled === true ? voiceStatus() : null,
         completion_conditions: {
           min_messages: assignment.completion_conditions?.min_messages || null,
           max_messages: assignment.completion_conditions?.max_messages || null,
@@ -989,8 +992,9 @@ router.patch('/session/:sessionId/artifact-draft', verifyLTI, verifySessionAcces
 
 // Text-to-speech for an assistant reply (voice mode). Synthesizes the stored
 // interaction's content (never arbitrary text) with the assignment's Polly
-// voice. Fail-safe: 503 when Polly is unavailable (missing IAM permission) —
-// the frontend falls back to text-only.
+// voice. Fail-safe: 503 when replies are off, Polly is unavailable, or the
+// usage limit is reached — the page then stays text-only. Each reply is
+// recorded as one call, with one "token" per character sent to Polly.
 router.post('/session/:sessionId/tts', verifyLTI, verifySessionAccess, async (req, res) => {
   try {
     const { sessionId } = req.params;
@@ -998,7 +1002,7 @@ router.post('/session/:sessionId/tts', verifyLTI, verifySessionAccess, async (re
     if (!interactionId) return res.status(400).json({ error: 'interactionId required' });
 
     const result = await pool.query(
-      `SELECT i.content, a.voice_config
+      `SELECT i.content, a.voice_config, s.assignment_id, s.platform_id
        FROM simulation_interactions i
        JOIN simulation_sessions s ON i.session_id = s.id
        JOIN assignments a ON s.assignment_id = a.id
@@ -1010,13 +1014,24 @@ router.post('/session/:sessionId/tts', verifyLTI, verifySessionAccess, async (re
       return res.status(400).json({ error: 'Voice is not enabled for this assignment' });
     }
 
-    const { synthesize, isTtsAvailable } = require('../services/tts');
+    const { synthesize, isTtsAvailable, MODEL_ID: TTS_MODEL } = require('../services/tts');
     if (!isTtsAvailable()) return res.status(503).json({ error: 'Voice output unavailable' });
+    const quota = await checkAiQuota();
+    if (!quota.allowed) return res.status(503).json({ error: 'Voice output unavailable: usage limit reached' });
 
     const { AREA_MARKER_RE: MARKER } = require('../utils/assignment-extras');
     const text = result.rows[0].content.replace(MARKER, '').slice(0, 3000);
     const audio = await synthesize(text, result.rows[0].voice_config.voice_id);
     if (!audio) return res.status(503).json({ error: 'Voice output unavailable' });
+
+    logAiUsage({
+      platform_id: result.rows[0].platform_id,
+      assignment_id: result.rows[0].assignment_id,
+      session_id: Number(sessionId),
+      model_id: TTS_MODEL,
+      call_type: 'voice_reply',
+      usage: { inputTokens: text.length, outputTokens: 0 },
+    });
 
     res.setHeader('Content-Type', 'audio/mpeg');
     res.setHeader('Cache-Control', 'private, max-age=3600');
