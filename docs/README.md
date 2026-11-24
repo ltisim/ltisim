@@ -13,6 +13,7 @@ Written for this edition (single institution, self-hosted, Canvas).
 | [Canvas-Setup.md](Canvas-Setup.md) | LMS administrator | Registering with Canvas, placements, who counts as an administrator, re-registering |
 | [Model-Providers.md](Model-Providers.md) | Person installing, LMS administrator | The three providers, adding models, defaults, how models are handled, usage and cost |
 | [Instance-Admin.md](Instance-Admin.md) | LMS administrator | Each tab of the Instance area, data export, what is not there |
+| [Voice.md](Voice.md) | Person installing, LMS administrator | Spoken input and replies: what they depend on, where audio goes, AWS permissions, limits, cost |
 | [Configuration.md](Configuration.md) | Person installing | Every environment variable and every in-app setting |
 | [Features.md](Features.md) | Everyone | What is included, what is not, differences from the hosted product |
 | [Known-Limitations.md](Known-Limitations.md) | Everyone | Untested areas and open issues, with workarounds |
@@ -37,6 +38,7 @@ Reference documentation for this edition's architecture, HTTP API and database d
 | The HTTP API | `backend/src/routes/`: `simulation.js` (students), `admin.js` and `authoring.js` (instructors), `instance.js` (administrators) |
 | How a launch is handled | `backend/src/config/lti.js` and `backend/src/utils/launch.js` |
 | How models are called | `backend/src/services/ai/` |
+| How voice works | `backend/src/ws/voice-ws.js`, `backend/src/services/transcribe-relay.js` and `tts.js`, `frontend/src/components/ChatInterface.jsx` |
 
 ## What changed where
 
@@ -48,6 +50,7 @@ A map from parts of the software to the documents to update.
 | Registration, placements, or role rules | Canvas-Setup.md |
 | A provider, or how models are handled | Model-Providers.md |
 | Anything in the Instance area | Instance-Admin.md |
+| Voice: speech services, fallback, limits, or the editor's voice option | Voice.md, and the Voice Conversation section of assignment-editor-guide.md |
 | Install, run, upgrade or backup steps | Self-Hosting.md |
 | Add or remove a feature | Features.md |
 | Fix or find a limitation, or verify something untested | Known-Limitations.md, and Project status in the README |

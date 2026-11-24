@@ -279,9 +279,14 @@ Technical settings for the AI model. These have sensible defaults — most instr
 
 *(All persona-based types — not LLM Interaction)*
 
-The **Voice conversation** checkbox lets students speak their messages (streamed to Amazon Transcribe for real-time speech-to-text — biased toward your persona names and rubric terms via an auto-built custom vocabulary — and editable before sending) and hear the persona's replies read aloud in a voice you pick (8 voices available). Typing always remains available — voice is never required, and students who decline microphone access lose nothing.
+The **Voice conversation** checkbox lets students speak their messages and, where your installation supports it, hear the persona's replies read aloud in a voice you pick (8 voices). What students say is turned into text in the message box, which they can edit before sending. Typing always remains available — voice is never required, and students who decline microphone access lose nothing.
 
-Spoken replies require Amazon Polly access on the server; if it's unavailable, students still get voice input and on-screen text. (See Known-Limitations.md — voice *output* is currently pending an IAM permission.)
+What voice does depends on how your installation is set up, so ask your administrator before relying on it:
+
+- **If the server has Amazon (AWS) access:** speech is transcribed by Amazon Transcribe, tuned to your persona names and rubric terms, and works in every browser with a microphone. Replies are read aloud by Amazon Polly.
+- **If it does not:** speech is transcribed by the student's own browser, which works in some browsers and not others, and usually sends the audio to the browser's maker. Replies are not read aloud; students see text only.
+
+The administrator's reference is [Voice](Voice.md).
 
 ---
 

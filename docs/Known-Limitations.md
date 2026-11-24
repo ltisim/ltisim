@@ -16,12 +16,19 @@ These are untested, not known to be broken.
 | Canvas account-menu entry | Registered but never launched | Use the Instance tab from a course |
 | Manual developer-key setup | Only the registration link has been used | Prefer the registration link |
 | LMSs other than Canvas | Not tested | Canvas only |
+| Voice | The code is unchanged from the hosted product, where spoken input through Amazon Transcribe ran in production. On this edition nothing about voice has been exercised: not Transcribe, not the browser fallback, not spoken replies. Spoken replies (Amazon Polly) were never confirmed working on the hosted product either | Try an assignment with voice in a test course, in each browser your students use, before offering it |
 
 ## Grading quality depends on your model
 
 Grading was validated only on Anthropic models through AWS Bedrock. Grading asks the model for a structured result by instruction alone; a model that does not follow it produces a result that cannot be read, and the session waits in "evaluation pending" while the system retries.
 
 Meanwhile: collect blind grades and read the Grading agreement view before using automatic release.
+
+## Voice depends on Amazon or the student's browser
+
+Voice is not routed through your AI provider. Spoken input uses Amazon Transcribe, or failing that the student's browser, which works in only some browsers and usually sends audio to the browser's maker. Spoken replies need Amazon Polly and have no alternative. There is no setting to choose the engine or to switch off the browser fallback, the language is fixed to US English on the Amazon path, and spoken replies are not counted in usage or stopped by the usage limits.
+
+Meanwhile: read [Voice](Voice.md) before enabling it. If audio must not leave your control, give the server AWS access for Transcribe or leave voice off.
 
 ## Bedrock cannot tell which models think first
 

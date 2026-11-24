@@ -740,10 +740,11 @@ function AssignmentEditor({ ltik, user }) {
                     <div>
                       <span className="text-sm font-medium text-gray-700">Voice conversation</span>
                       <p className="text-xs text-gray-400 mt-0.5">
-                        Students can speak their messages (transcribed in the browser, editable before sending)
-                        and hear the persona's replies read aloud. Typing always remains available — voice is
-                        never required. Spoken replies need Amazon Polly access on the server; if unavailable,
-                        students still get voice input and on-screen text.
+                        Students can speak their messages (turned into text they can edit before sending) and hear
+                        the persona's replies read aloud. Typing always remains available — voice is never
+                        required. Speech is handled by Amazon services when the server has AWS access.
+                        Without it, the student's browser does the transcription, which works in some browsers
+                        only and may send audio to the browser's maker, and replies are not read aloud.
                       </p>
                     </div>
                   </label>

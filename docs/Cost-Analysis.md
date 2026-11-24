@@ -175,6 +175,8 @@ The cost grows more than linearly because each new message requires resending th
 
 ## Voice input (Amazon Transcribe streaming, v22)
 
+> In this edition, voice usage is recorded but unpriced unless you add a price, and there are no tenants or statements. See [Voice](Voice.md#usage-and-cost).
+
 When a student speaks instead of types, mic audio streams to Amazon Transcribe at **$0.024/min** of audio ($0.40 per 1,000 seconds — 1 "input token" = 1 second in `ai_usage`, `call_type='voice'`, model `aws.transcribe-streaming`). Voice cost therefore appears in the same tenant budgets, alerts, and statements as model cost.
 
 | Speaking time per session | Transcribe cost |

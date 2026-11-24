@@ -10,7 +10,7 @@ Scope of this release: **one installation, one institution, Canvas.**
 
 - Role-play sessions with an AI persona, opened directly from a Canvas assignment.
 - Replies that stream as they are written.
-- Spoken input: Amazon Transcribe when AWS credentials allow, otherwise the browser's own speech recognition.
+- Spoken input and spoken replies, where the instructor turns voice on. Both depend on Amazon services or the student's browser, not on your AI provider; see [Voice](Voice.md) for what works without AWS and where audio goes.
 - Practice sessions that do not count toward the grade, where the instructor allows them.
 - Feedback against the rubric once it is released.
 
@@ -64,7 +64,8 @@ Scope of this release: **one installation, one institution, Canvas.**
 | Model prices | None are shipped. Spend is tracked only for models you price yourself |
 | Grading validation for non-Anthropic models | Not measured. See [Model providers](Model-Providers.md) |
 | The grading validation scripts | The method and results are documented, but the scripts depended on private data and are not included |
-| Spoken AI replies | The code path exists (Amazon Polly) but is not enabled |
+| Spoken AI replies without AWS | Replies are read aloud only through Amazon Polly. There is no other speech service and no browser fallback. See [Voice](Voice.md) |
+| Voice through your own AI provider | Speech is not routed through the Anthropic or OpenAI-compatible providers |
 
 ## Differences from the hosted product
 
@@ -86,4 +87,4 @@ The hosted product serves many institutions from one deployment. This edition re
 | Session tokens never expire | A launch is valid for 24 hours by default |
 | The course is inferred from the Canvas deployment | The course is recorded from each launch, which is what makes account-level installs work |
 
-What did not change: the assignment types, the authoring tools, the grading method, the review workflow, voice input, and the student experience.
+What did not change: the assignment types, the authoring tools, the grading method, the review workflow, voice, and the student experience. Voice still relies on Amazon services, which is the one place this edition is not provider-neutral.

@@ -7,6 +7,8 @@ LTISim does not ship with a model. You connect one AI provider and decide which 
 
 No model name or price is built into LTISim. A new installation starts with an empty model list.
 
+> **Voice is separate.** Spoken input and spoken replies do not go through the provider you choose here. See [Voice](Voice.md).
+
 ## Read this first: grading quality
 
 LTISim uses a model in two roles:
